@@ -68,11 +68,11 @@ typedef std::vector<calibrationParameters> DigiChannelCalibration;
 //   just a ROOT wrapper for an unordered map.
 class DigitizerCalibration :
     public TNamed,
-    public std::unordered_map<const bgc_key_t, DigiChannelCalibration, key_hash, key_equal>
+    public std::unordered_map<bgc_key_t, DigiChannelCalibration, key_hash, key_equal>
 {
 public:
 
-    DigitizerCalibration() : TNamed(), std::unordered_map<const bgc_key_t, DigiChannelCalibration, key_hash, key_equal>()
+    DigitizerCalibration() : TNamed(), std::unordered_map<bgc_key_t, DigiChannelCalibration, key_hash, key_equal>()
         {
             clear();
         }

@@ -13,109 +13,116 @@ SRCSuf = .cc
 PRGSuf = .cpp
 OBJSuf = .o
 LIBSuf = .so
+BINSuf = .exe
 
-HDRS     =  $(wildcard $(HDR)*$(HDRSuf))
-SRCS     =  $(wildcard $(SRC)*$(SRCSuf))
-PLGS     =  $(wildcard $(PLG)*$(SRCSuf))
-_OBJS    =  $(patsubst %$(SRCSuf), %$(OBJSuf), $(SRCS))
-OBJS     =  $(patsubst $(SRC)%, $(OBJ)%, $(_OBJS))
-_PLGOBJS =  $(patsubst %$(SRCSuf), %$(OBJSuf), $(PLGS))
-PLGOBJS  =  $(patsubst $(PLG)%, $(OBJ)%, $(_PLGOBJS))
-_LIBS    =  $(patsubst %$(SRCSuf), %$(LIBSuf), $(PLGS))
-LIBS     =  $(patsubst $(PLG)%, $(LIB)lib%, $(_LIBS))
-PRGS     =  $(wildcard $(PRG)*$(PRGSuf))
-_BINS    =  $(wildcard $(PRG)*$(PRGSuf))
-__BINS   =  $(_BINS:$(PRGSuf)=$(BINSuf))
-___BINS  =  $(notdir $(__BINS))
-BINS     =  $(addprefix $(BIN),${___BINS})
+HDRS     = $(wildcard $(HDR)*$(HDRSuf))
+SRCS     = $(wildcard $(SRC)*$(SRCSuf))
+PLGS     = $(wildcard $(PLG)*$(SRCSuf))
 
-LINKDEF   =  $(wildcard ${HDR}*LinkDef.h)
-DICTHDRS  =  $(patsubst $(LINKDEF),,$(HDRS)) $(LINKDEF)
+_OBJS    = $(patsubst %$(SRCSuf),%$(OBJSuf),$(SRCS))
+OBJS     = $(patsubst $(SRC)%,$(OBJ)%,$(_OBJS))
 
+_LIBS    = $(patsubst %$(SRCSuf),%$(LIBSuf),$(PLGS))
+LIBS     = $(patsubst $(PLG)%,$(LIB)lib%,$(_LIBS))
 
-ARCH  =  $(shell root-config --arch)
+PRGS     = $(wildcard $(PRG)*$(PRGSuf))
+_BINS    = $(wildcard $(PRG)*$(PRGSuf))
+__BINS   = $(_BINS:$(PRGSuf)=$(BINSuf))
+___BINS  = $(notdir $(__BINS))
+BINS     = $(addprefix $(BIN),$(___BINS))
 
-ROOTCFLAGS    = $(shell root-config --cflags)
-ROOTGLIBS     = $(shell root-config --glibs) -lMinuit -lTreePlayer -lMathMore -lGenVector
+LINKDEF  = $(wildcard $(HDR)*LinkDef.h)
+DICTHDRS = $(patsubst $(LINKDEF),,$(HDRS)) $(LINKDEF)
 
-CXX  =  g++
-CXXFLAGS  = -Wall -Wno-sign-compare -Wno-overloaded-virtual -O2 -fPIC -I$(DIR) $(ROOTCFLAGS)
+ARCH = $(shell root-config --arch)
 
-CPP  =  g++
-CPPFLAGS  = -Wall -Wno-sign-compare -Wno-overloaded-virtual -I$(DIR) $(ROOTCFLAGS)
+ROOTCFLAGS = $(shell root-config --cflags)
+ROOTLIBS   = $(shell root-config --libs) -lMinuit -lTreePlayer -lMathMore -lGenVector
 
-ifeq ($(parallel), 1)
+CXX = $(shell root-config --cxx)
+CPP = $(CXX)
+LD  = $(CXX)
+
+COMMONFLAGS = -Wall -Wno-sign-compare -Wno-overloaded-virtual -O2 -fPIC \
+              -I$(DIR) \
+              -I$(DIR)/interface \
+              $(ROOTCFLAGS)
+
+CXXFLAGS = $(COMMONFLAGS)
+CPPFLAGS = $(COMMONFLAGS)
+
+ifeq ($(parallel),1)
 CXXFLAGS += -DPARALLEL -fopenmp
+CPPFLAGS += -DPARALLEL -fopenmp
 endif
 
-LD       =  g++
-LDFLAGS  =  -rdynamic -shared -O2 
-SONAME	 =  libH4Analysis.so
-SOFLAGS  =  -Wl,-soname,
+LIBSuf = .so
+SONAME = libH4Analysis.so
 
-GLIBS   =  -lm -L./DynamicTTree/lib -L./CfgManager/lib -Wl,-rpath=$(DIR)/lib/:$(DIR)/DynamicTTree/lib/:$(DIR)/CfgManager/lib/ -lDTT -lCFGMan $(ROOTGLIBS)
+LDFLAGS = -shared -O2
+SOFLAGS = -Wl,-soname,
+EXTRAFS = -lstdc++fs
 
+RPATHFLAGS = -Wl,-rpath,$(DIR)/lib \
+             -Wl,-rpath,$(DIR)/DynamicTTree/lib \
+             -Wl,-rpath,$(DIR)/CfgManager/lib
 
+ifneq (,$(findstring macosx,$(ARCH)))
+LIBSuf = .dylib
+SONAME = libH4Analysis.dylib
 
-#################################################
-#if mac 64
-ifeq ($(ARCH),macosx64)
-LIBSuf  =  .dylib
-
-CPPFLAGS  =  -Wall -W -O2 -pipe -I$(HDR) $(ROOTCFLAGS)
-
-CXXFLAGS  =  -Wall -W -O2 -pipe -I$(HDR) $(ROOTCFLAGS)
-
-LDFLAGS  =  -dynamiclib -shared -single_module -undefined dynamic_lookup
-SONAME	 =  libH4Analysis.dylib
-SOFLAGS  =
+LDFLAGS = -dynamiclib -single_module -undefined dynamic_lookup
+SOFLAGS = -Wl,-install_name,
+EXTRAFS =
 endif
-#################################################
 
+GLIBS = -lm \
+        -L./DynamicTTree/lib \
+        -L./CfgManager/lib \
+        $(RPATHFLAGS) \
+        -lDTT -lCFGMan \
+        $(ROOTLIBS)
 
-
-.PHONY: all clean test
-
+.PHONY: all clean test dynTTree cfgMan
 
 all: dynTTree cfgMan $(LIB)$(SONAME) $(LIBS) $(BINS)
 
 test:
-	@echo "HDRS = $(HDRS)"
-	@echo "DICTHDRS = $(DICTHDRS)"
+	@echo "ARCH = $(ARCH)"
+	@echo "CXX = $(CXX)"
+	@echo "SONAME = $(SONAME)"
+	@echo "LIBSuf = $(LIBSuf)"
 	@echo "SRCS = $(SRCS)"
 	@echo "PLGS = $(PLGS)"
-	@echo "PRGS = $(PRGS)"
 	@echo "OBJS = $(OBJS)"
-	@echo "PLGOBJS = $(PLGOBJS)"
 	@echo "LIBS = $(LIBS)"
 	@echo "BINS = $(BINS)"
 
-$(BIN)%: $(PRG)%$(PRGSuf) $(HDRS) $(LIB)$(SONAME) Makefile
-	@echo "Building main executable"
+$(BIN)%$(BINSuf): $(PRG)%$(PRGSuf) $(HDRS) $(LIB)$(SONAME) Makefile
+	@echo "Building main executable $@"
 	@echo " CXX $<"
-	@$ $(CPP) $(CPPFLAGS) $(GLIBS) -L$(LIB) -lH4Analysis -lWFAnalyzer -o $@ $< -lstdc++fs
+	@$(CPP) $(CPPFLAGS) -o $@ $< -L$(LIB) -lH4Analysis -lWFAnalyzer $(GLIBS) $(EXTRAFS)
 
 $(OBJ)%$(OBJSuf): $(SRC)%$(SRCSuf) Makefile
 	@echo " CXX $<"
-	@$ $(CXX) -c $(CXXFLAGS) -o $@ $< 
+	@$(CXX) -c $(CXXFLAGS) -o $@ $<
 
 $(LIB)libH4Analysis.cc: $(DICTHDRS) src/classes_def.xml
 	@echo "Generating dictionary..."
-#	@$ rootcling -f $(LIB)libH4Analysis.cc -c -p ${CXXFLAGS} $(DICTHDRS)
-	@$ genreflex $(DICTHDRS) -o $@ -s src/classes_def.xml -I$(DIR)/interface/
+	@genreflex $(DICTHDRS) -o $@ -s src/classes_def.xml -I$(DIR)/interface/ -I$(DIR)
 
-$(LIB)libH4Analysis.o: $(LIB)libH4Analysis.cc
-	@echo " CXX $<"	
-	@$ $(CXX) -c $(CXXFLAGS) -o $@ $<
+$(LIB)libH4Analysis.o: $(LIB)libH4Analysis.cc Makefile
+	@echo " CXX $<"
+	@$(CXX) -c $(CXXFLAGS) -o $@ $<
 
 $(LIB)$(SONAME): $(OBJS) $(LIB)libH4Analysis.o
 	@echo "Linking $(SONAME):"
-	@$ $(LD) $(LDFLAGS) $(OBJS) $(LIB)libH4Analysis.o -o $(LIB)$(SONAME) $(SOFLAGS)$(SONAME) $(GLIBS)
+	@$(LD) $(LDFLAGS) -o $(LIB)$(SONAME) $(OBJS) $(LIB)libH4Analysis.o $(SOFLAGS)$(SONAME) $(GLIBS)
 
 $(LIB)lib%$(LIBSuf): $(PLG)%$(SRCSuf) $(PLG)%$(HDRSuf) $(OBJS) $(LIB)$(SONAME)
-	@echo "Creating plugin library " $@
-	@echo " CXX $<"	
-	@$ $(LD) $(CXXFLAGS) $(LDFLAGS) -o $@ $< $(GLIBS) -L$(LIB) -lH4Analysis
+	@echo "Creating plugin library $@"
+	@echo " CXX $<"
+	@$(LD) $(CXXFLAGS) $(LDFLAGS) -o $@ $< -L$(LIB) -lH4Analysis $(GLIBS)
 
 dynTTree:
 	cd DynamicTTree && $(MAKE)
@@ -125,6 +132,6 @@ cfgMan:
 
 clean:
 	@echo "cleaning..."
-	rm -f lib/* $(OBJ)*$(OBJSuf) $(LIB)*$(LIBSuf) $(LIB)libH4Analysis* $(BIN)*$(BINSuf)
+	rm -f $(OBJ)*$(OBJSuf) $(LIB)*$(LIBSuf) $(LIB)libH4Analysis* $(BIN)*$(BINSuf)
 	cd DynamicTTree && $(MAKE) clean
 	cd CfgManager && $(MAKE) clean

@@ -23,24 +23,33 @@ typedef unsigned long long int uint64;
 typedef std::tuple<unsigned int, unsigned int, unsigned int> bgc_key_t;
 
 //---hash functions
-struct key_hash : public std::unary_function<bgc_key_t, size_t>
+struct key_hash
 {
-    size_t operator()(const bgc_key_t& k) const
-        {
-            return std::get<0>(k) ^ std::get<1>(k) ^ std::get<2>(k);
-        }
+  using argument_type = bgc_key_t;
+  using result_type = size_t;
+
+  size_t operator()(const bgc_key_t& v) const
+  {
+    return
+      std::get<0>(v) ^
+      std::get<1>(v) ^
+      std::get<2>(v);
+  }
 };
 
-struct key_equal : public std::binary_function<bgc_key_t, bgc_key_t, bool>
+struct key_equal
 {
-    bool operator()(const bgc_key_t& v0, const bgc_key_t& v1) const
-        {
-            return (
-                std::get<0>(v0) == std::get<0>(v1) &&
-                std::get<1>(v0) == std::get<1>(v1) &&
-                std::get<2>(v0) == std::get<2>(v1)
-                );
-        }
+  using first_argument_type = bgc_key_t;
+  using second_argument_type = bgc_key_t;
+  using result_type = bool;
+
+  bool operator()(const bgc_key_t& v0, const bgc_key_t& v1) const
+  {
+    return
+      std::get<0>(v0) == std::get<0>(v1) &&
+      std::get<1>(v0) == std::get<1>(v1) &&
+      std::get<2>(v0) == std::get<2>(v1);
+  }
 };
 
 //---map type

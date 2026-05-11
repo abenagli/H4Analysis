@@ -9,7 +9,7 @@
 #include <fstream>
 #include <string>
 #include <regex>
-#include <experimental/filesystem>
+#include <filesystem>
 
 #include "TFile.h"
 #include "TChain.h"
@@ -22,7 +22,7 @@
 #include "interface/DataLoader.h"
 #include "interface/RecoTree.h"
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 //**********UTILS*************************************************************************
 std::string getMachineDomain()
